@@ -8,10 +8,6 @@ MODEL_PATH = os.path.join(BASE_DIR, "models")
 DICTIONARY_PATH = os.path.join(BASE_DIR, "dictionary")
 LOGS_DIR = os.path.join(BASE_DIR, "logs")
 
-# Tạo các thư mục nếu chưa tồn tại
-os.makedirs(MODEL_PATH, exist_ok=True)
-os.makedirs(LOGS_DIR, exist_ok=True)
-
 # Cấu hình phân tích cảm xúc
 SENTIMENT_CONFIG = {
     "thresholds": {

@@ -1,23 +1,60 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 from config import MODEL_PATH
-from dictionary.vietnamese_sentiment_dict import (
-    DISPLAY_CONTROLLER, CHART_CONFIG, TEXT_DISPLAY, 
-    CHART_PRIORITY, CHART_PALETTE, SENTIMENT_RULES
-)
 import os
 import sys
 import re
+import json
 
 # Thêm đường dẫn thư mục gốc vào PYTHONPATH
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, os.path.join(ROOT_DIR, "dictionary"))
 
-from vietnamese_sentiment_dict import (
-    SENTIMENT_DICT, NEGATION_WORDS, INTENSIFIER_WORDS, 
-    DIMINISHER_WORDS, COMPOUND_WORDS, PUNCTUATION_ANALYSIS
-)
+# Sử dụng DictionaryManager để nạp từ điển từ JSON
+from dictionary.dict_manager import DictionaryManager
+
+# Khởi tạo Dictionary Manager
+dict_manager = DictionaryManager(os.path.join(ROOT_DIR, "dictionary"))
+
+# Lấy các từ điển
+SENTIMENT_DICT = dict_manager.get_sentiment_dict()
+NEGATION_WORDS = dict_manager.get_negation_words()
+INTENSIFIER_WORDS = dict_manager.get_intensifier_words()
+DIMINISHER_WORDS = dict_manager.get_diminisher_words()
+COMPOUND_WORDS = dict_manager.get_compound_words()
+PUNCTUATION_ANALYSIS = dict_manager.get_punctuation_analysis()
+
+# Load các cấu hình hiển thị từ sentiment_setting.json (hoặc tạo mới nếu không có)
+settings_file = os.path.join(ROOT_DIR, "dictionary", "json", "sentiment_settings.json")
+if os.path.exists(settings_file):
+    with open(settings_file, 'r', encoding='utf-8') as f:
+        settings = json.load(f)
+        DISPLAY_CONTROLLER = settings.get('DISPLAY_CONTROLLER', {})
+        CHART_CONFIG = settings.get('CHART_CONFIG', {})
+        TEXT_DISPLAY = settings.get('TEXT_DISPLAY', {})
+        CHART_PRIORITY = settings.get('CHART_PRIORITY', {})
+        CHART_PALETTE = settings.get('CHART_PALETTE', {})
+        SENTIMENT_RULES = settings.get('SENTIMENT_RULES', {})
+else:
+    # Mặc định nếu không có file settings
+    DISPLAY_CONTROLLER = {"calculation": {"use_raw_values": True, "respect_signs": True}}
+    CHART_CONFIG = {"display": {"enabled": True, "show_all_columns": True, "bars": {"show_values": True}}}
+    TEXT_DISPLAY = {
+        "sentiment": {
+            "positive": {"text": "Tích cực", "icon": "😊"},
+            "negative": {"text": "Tiêu cực", "icon": "🙁"},
+            "neutral": {"text": "Trung lập", "icon": "😐"}
+        },
+        "confidence": {
+            "high": {"text": "Độ tin cậy cao", "threshold": 70.0},
+            "medium": {"text": "Độ tin cậy trung bình", "threshold": 40.0},
+            "low": {"text": "Độ tin cậy thấp", "threshold": 0.0}
+        }
+    }
+    CHART_PRIORITY = {"enforce_config": False, "confidence_min": 0.0, "rotate_labels": 0, "show_values": True, "relative_scaling": False}
+    CHART_PALETTE = {"positive": "#2E7D32", "neutral": "#757575", "negative": "#F44336"}
+    SENTIMENT_RULES = {"thresholds": {"positive": 0.1, "negative": -0.1, "neutral": [-0.1, 0.1]}}
 
 class SentenceAnalyzer:
     def __init__(self):
@@ -69,7 +106,7 @@ class SentenceAnalyzer:
             confidence = min(confidence, 100.0)
             
             # Áp dụng cấu hình hiển thị
-            display_result = self._apply_display_config(adjusted_sentiment, main_sentiment, confidence)
+            display_result = self._apply_display_config(adjusted_sentiment, main_sentiment, confidence, word_analysis_result)
             
             return display_result
             
@@ -111,7 +148,7 @@ class SentenceAnalyzer:
                 
         return adjusted
     
-    def _apply_display_config(self, sentiment, main_sentiment, confidence):
+    def _apply_display_config(self, sentiment, main_sentiment, confidence, word_analysis_result=None):
         """Áp dụng cấu hình hiển thị cho kết quả phân tích"""
         # Xác định lại cảm xúc chính dựa trên giá trị thực
         if sentiment["negative"] > max(sentiment["positive"], sentiment["neutral"]):
@@ -121,10 +158,33 @@ class SentenceAnalyzer:
         else:
             main_sentiment = "neutral"
         
-        # Tính độ tin cậy dựa trên chênh lệch giữa các giá trị
+        # Tính độ tin cậy dựa trên chênh lệch giữa các giá trị và dữ liệu từ phân tích từ
         max_value = max(sentiment.values())
-        second_max = sorted(sentiment.values())[-2]
-        confidence = ((max_value - second_max) / max_value) * 100
+        if max_value > 0:
+            second_max = sorted(sentiment.values())[-2] if len(sentiment.values()) > 1 else 0
+            base_confidence = ((max_value - second_max) / max_value) * 100
+            
+            # Kiểm tra nếu có dữ liệu từ phân tích từ
+            if word_analysis_result and "words" in word_analysis_result:
+                # Tính tổng điểm và số lượng từ có điểm
+                words_with_score = [w for w in word_analysis_result["words"] if abs(w.get("score", 0)) > 0]
+                total_word_score = sum(abs(w.get("score", 0)) for w in words_with_score)
+                
+                # Tăng độ tin cậy cho các cụm từ ngắn có ý nghĩa rõ ràng
+                if len(words_with_score) <= 3 and total_word_score > 0.5:
+                    # Tăng độ tin cậy khi có ít từ và điểm cao
+                    confidence_boost = min(30, 40 - len(words_with_score) * 5)  # Tăng thêm tối đa 30%
+                    confidence = min(98, base_confidence + confidence_boost)  # Giới hạn ở 98%
+                elif len(word_analysis_result["words"]) <= 5:
+                    # Tăng nhẹ cho các câu ngắn
+                    confidence = min(95, base_confidence + 15)
+                else:
+                    confidence = base_confidence
+            else:
+                confidence = base_confidence
+        else:
+            # Trường hợp tất cả các giá trị đều = 0
+            confidence = 0
         
         result = {
             "sentiment": sentiment,

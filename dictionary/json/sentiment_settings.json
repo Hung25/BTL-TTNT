@@ -1,0 +1,66 @@
+{
+    "DISPLAY_CONTROLLER": {
+        "calculation": {
+            "use_raw_values": true,
+            "respect_signs": true
+        }
+    },
+    "CHART_CONFIG": {
+        "display": {
+            "enabled": true,
+            "show_all_columns": true,
+            "bars": {
+                "show_values": true
+            }
+        }
+    },
+    "TEXT_DISPLAY": {
+        "sentiment": {
+            "positive": {
+                "text": "Tích cực",
+                "icon": "😊"
+            },
+            "neutral": {
+                "text": "Trung lập",
+                "icon": "😐"
+            },
+            "negative": {
+                "text": "Tiêu cực",
+                "icon": "😔"
+            }
+        },
+        "confidence": {
+            "high": {
+                "text": "Độ tin cậy cao",
+                "threshold": 70.0
+            },
+            "medium": {
+                "text": "Độ tin cậy trung bình",
+                "threshold": 40.0
+            },
+            "low": {
+                "text": "Độ tin cậy thấp",
+                "threshold": 0.0
+            }
+        }
+    },
+    "CHART_PRIORITY": {
+        "enforce_config": false,
+        "confidence_min": 0.0,
+        "rotate_labels": 0,
+        "show_values": true,
+        "relative_scaling": false
+    },
+    "CHART_PALETTE": {
+        "positive": "#2E7D32",
+        "neutral": "#757575",
+        "negative": "#F44336"
+    },
+    "SENTIMENT_RULES": {
+        "thresholds": {
+            "positive": 0.1,
+            "negative": -0.1,
+            "neutral": [-0.1, 0.1]
+        }
+    }
+}

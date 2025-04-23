@@ -1,0 +1,92 @@
+{
+    "!": {
+        "effect": "intensify",
+        "multiplier": 1.5,
+        "description": "Dấu chấm than làm tăng cường cảm xúc"
+    },
+    "!!": {
+        "effect": "intensify",
+        "multiplier": 2.0,
+        "description": "Nhiều dấu chấm than làm tăng cường cảm xúc mạnh hơn"
+    },
+    "!!!": {
+        "effect": "intensify",
+        "multiplier": 2.5,
+        "description": "Rất nhiều dấu chấm than làm tăng cường cảm xúc rất mạnh"
+    },
+    "?": {
+        "effect": "question",
+        "multiplier": 0.8,
+        "description": "Dấu hỏi có thể làm giảm nhẹ mức độ chắc chắn"
+    },
+    "??": {
+        "effect": "question",
+        "multiplier": 0.6,
+        "description": "Nhiều dấu hỏi thể hiện sự nghi ngờ cao"
+    },
+    "...": {
+        "effect": "pause",
+        "multiplier": 0.9,
+        "description": "Dấu ba chấm thể hiện sự ngập ngừng hoặc không chắc chắn"
+    },
+    ".": {
+        "effect": "neutral",
+        "multiplier": 1.0,
+        "description": "Dấu chấm câu bình thường"
+    },
+    ",": {
+        "effect": "neutral",
+        "multiplier": 1.0,
+        "description": "Dấu phẩy không ảnh hưởng đến cảm xúc"
+    },
+    ":)": {
+        "effect": "positive",
+        "value": 0.5,
+        "description": "Biểu tượng mặt cười thể hiện cảm xúc tích cực"
+    },
+    ":(": {
+        "effect": "negative",
+        "value": -0.5,
+        "description": "Biểu tượng mặt buồn thể hiện cảm xúc tiêu cực"
+    },
+    ":D": {
+        "effect": "positive",
+        "value": 0.7,
+        "description": "Biểu tượng cười lớn thể hiện cảm xúc rất tích cực"
+    },
+    ":'(": {
+        "effect": "negative",
+        "value": -0.8,
+        "description": "Biểu tượng khóc thể hiện cảm xúc rất tiêu cực"
+    },
+    "😊": {
+        "effect": "positive",
+        "value": 0.6,
+        "description": "Emoji mặt cười thể hiện cảm xúc tích cực"
+    },
+    "😔": {
+        "effect": "negative",
+        "value": -0.6,
+        "description": "Emoji buồn thể hiện cảm xúc tiêu cực"
+    },
+    "😢": {
+        "effect": "negative",
+        "value": -0.7,
+        "description": "Emoji khóc thể hiện cảm xúc tiêu cực"
+    },
+    "😍": {
+        "effect": "positive",
+        "value": 0.9,
+        "description": "Emoji yêu thích thể hiện cảm xúc rất tích cực"
+    },
+    "😂": {
+        "effect": "positive",
+        "value": 1.0,
+        "description": "Emoji tích cực thể hiện cảm xúc rất tích cực"
+    },
+    "🤫": {
+        "effect": "positive",
+        "value": 1.0,
+        "description": "Emoji tích cực thể hiện cảm xúc tích cực"
+    }
+}
