@@ -89,4 +89,4 @@ BTL-TTNT/
 
 ## Giấy phép
 
-(Phần này có thể thêm thông tin về giấy phép của dự án)
+(Phần này không có giấy phép của dự án)

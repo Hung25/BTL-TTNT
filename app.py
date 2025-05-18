@@ -344,7 +344,7 @@ with tab1:
                 save_analysis_history(text, word_analysis, sentence_analysis)
             except Exception as e:
                 st.error(f"❌ Có lỗi xảy ra: {str(e)}")
-                st.error("Vui lòng thử lại hoặc liên hệ hỗ trợ!")
+                st.error("Vui lòng thử lại!")
 
 with tab2:
     st.title("Huấn luyện mô hình")
