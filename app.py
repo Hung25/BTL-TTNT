@@ -23,6 +23,11 @@ import json
 from word_analysis import analyze_word_sentiment
 from sentence_analysis import SentenceAnalyzer
 from dictionary.dict_manager import DictionaryManager
+import pandas as pd
+from io import StringIO
+from docx import Document
+import datetime
+
 def add_word(word, score):
     # Validate input
     if not (-1 <= score <= 1):
@@ -71,8 +76,61 @@ st.set_page_config(
 if 'sentence_analyzer' not in st.session_state:
     st.session_state.sentence_analyzer = SentenceAnalyzer()
 
+# Lưu lịch sử phân tích vào session state
+if 'analysis_history' not in st.session_state:
+    st.session_state.analysis_history = []
+
+# Hàm lưu lịch sử phân tích
+def get_status_from_sentiment(sentence_result):
+    # Xác định trạng thái dựa trên cảm xúc chính
+    if isinstance(sentence_result, dict):
+        main = sentence_result.get('main_sentiment')
+        if main:
+            if 'tích cực' in main.lower() or 'positive' in main.lower():
+                return 'Tích cực'
+            elif 'tiêu cực' in main.lower() or 'negative' in main.lower():
+                return 'Tiêu cực'
+            elif 'trung lập' in main.lower() or 'neutral' in main.lower():
+                return 'Trung lập'
+    return 'Không xác định'
+
+def save_analysis_history(text, word_result, sentence_result):
+    status = get_status_from_sentiment(sentence_result)
+    st.session_state.analysis_history.append({
+        'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'text': text,
+        'word_result': word_result,
+        'sentence_result': sentence_result,
+        'status': status
+    })
+
+# Hàm xuất báo cáo ra file docx
+def export_report_docx(history):
+    doc = Document()
+    doc.add_heading('Báo cáo lịch sử phân tích cảm xúc', 0)
+    for entry in history:
+        doc.add_heading(f"Thời gian: {entry['timestamp']}", level=1)
+        doc.add_paragraph(f"Văn bản: {entry['text']}")
+        doc.add_paragraph(f"Trạng thái: {entry.get('status', 'Không xác định')}")
+        doc.add_heading('Kết quả phân tích từ:', level=2)
+        for word in entry['word_result']['words']:
+            doc.add_paragraph(f"- {word['word']}: {word['score']} ({word.get('type','')})")
+        doc.add_heading('Kết quả phân tích câu:', level=2)
+        doc.add_paragraph(str(entry['sentence_result']))
+    buffer = StringIO()
+    doc.save('report.docx')
+    return 'report.docx'
+
+# Hàm giả lập huấn luyện lại mô hình
+@st.cache_data(show_spinner=False)
+def retrain_model(train_data):
+    # Placeholder: Thực tế sẽ gọi script huấn luyện, lưu model mới
+    import time
+    time.sleep(2)
+    return 'Huấn luyện lại mô hình thành công!'
+
 # Tạo tabs cho ứng dụng
-tab1, tab2 = st.tabs(["Phân tích cảm xúc", "Huấn luyện mô hình"])
+tab1, tab2, tab3 = st.tabs(["Phân tích cảm xúc", "Huấn luyện mô hình", "Thống kê & Báo cáo"])
 
 with tab1:
     # Tiêu đề và mô tả
@@ -283,6 +341,7 @@ with tab1:
                         }
                         st.write(stats)
                         
+                save_analysis_history(text, word_analysis, sentence_analysis)
             except Exception as e:
                 st.error(f"❌ Có lỗi xảy ra: {str(e)}")
                 st.error("Vui lòng thử lại hoặc liên hệ hỗ trợ!")
@@ -294,22 +353,22 @@ with tab2:
     """)
     
     # Tạo các tab cho các loại huấn luyện khác nhau
-    train_tab1, train_tab2, train_tab3, train_tab4 = st.tabs(["⚡ Thêm từ mới", "😊 Thêm biểu tượng cảm xúc", "👥 Thêm cụm từ", "📜 Thêm thành ngữ/tục ngữ"])
+    train_tab1, train_tab2, train_tab3, train_tab4 = st.tabs(["⚡ Thêm từ đơn mới", "😊 Thêm biểu tượng cảm xúc", "👥 Thêm cụm từ", "📜 Thêm thành ngữ/tục ngữ"])
 
 with train_tab1:
     st.subheader("Thêm từ ngữ mới vào từ điển")
     # Form nhập từ mới
     with st.form("add_word_form"):
-        new_word = st.text_input("Nhập từ mới:", placeholder="Ví dụ: tuyệt vời")
-        sentiment_score = st.slider("Điểm số:", min_value=-1.0, max_value=1.0, value=0.0, step=0.1, key="sentiment_score_slider")
+        new_word = st.text_input("Nhập từ mới (CHỈ NHẬP MỘT TỪ đơn lẻ):", placeholder="Ví dụ: tuyệt")
+        sentiment_score = st.slider("Điểm số:", min_value=-1.0, max_value=1.0, value=0.0, step=0.1, key="word_score_slider")
         # Tự động xác định loại cảm xúc dựa trên điểm số
         from config import SENTIMENT_CONFIG
 
         def determine_sentiment_type(score):
-            thresholds = SENTIMENT_CONFIG['thresholds']
-            if score >= thresholds['positive']:
+            # Đảm bảo phân loại chính xác với ngưỡng 0.1
+            if score >= 0.1:
                 return 'Tích cực'
-            elif score <= thresholds['negative']:
+            elif score <= -0.1:
                 return 'Tiêu cực'
             else:
                 return 'Trung lập'
@@ -319,33 +378,35 @@ with train_tab1:
         st.write(f'**Loại tự động:** {sentiment_type}')
         submit_word = st.form_submit_button("Thêm từ")
     if submit_word and new_word.strip():
-        try:
-            # Gọi hàm thêm từ với validation
-            if -1.0 <= sentiment_score <= 1.0 and new_word.strip():
-                # Sử dụng hàm add_word để thêm từ vào từ điển JSON
-                success, message = dict_manager.add_word_to_sentiment_dict(new_word, sentiment_score)
-                
-                if success:
-                    # Cập nhật các biến toàn cục
-                    SENTIMENT_DICT = dict_manager.get_sentiment_dict()
-                    
-                    st.success(f"✅ Đã thêm từ '{new_word}' với điểm số {sentiment_score} (loại: {sentiment_type}) vào từ điển!")
-                    st.info("ℹ️ Từ mới đã được thêm vào và sẵn sàng sử dụng ngay lập tức.")
+        # Kiểm tra xem input có phải từ đơn không
+        if len(new_word.split()) > 1:
+            st.error(f"❌ '{new_word}' chứa nhiều từ! Vui lòng chỉ nhập MỘT TỪ đơn lẻ duy nhất. Nếu muốn thêm cụm từ, hãy sử dụng tab 'Thêm cụm từ mới'.")
+        else:
+            try:
+                # Kiểm tra xem từ đã tồn tại chưa
+                if new_word in SENTIMENT_DICT:
+                    st.warning(f"⚠️ Từ '{new_word}' đã tồn tại trong từ điển!")
                 else:
-                    st.warning(f"⚠️ {message}")
-            else:
-                st.error("❌ Điểm số phải trong khoảng [-1.0, 1.0]")
-        except Exception as e:
-            st.error(f"❌ Có lỗi xảy ra khi cập nhật từ điển: {str(e)}")
+                    # Thêm từ mới vào từ điển bằng dictionary manager
+                    if dict_manager.add_word_to_sentiment_dict(new_word, sentiment_score):
+                        # Cập nhật biến toàn cục
+                        SENTIMENT_DICT = dict_manager.get_sentiment_dict()
+                        
+                        st.success(f"✅ Đã thêm từ '{new_word}' với điểm số {sentiment_score} (loại: {sentiment_type}) vào từ điển!")
+                        st.info("ℹ️ Từ mới đã được thêm vào và sẵn sàng sử dụng ngay lập tức.")
+                    else:
+                        st.error("❌ Không thể thêm từ vào từ điển!")
+            except Exception as e:
+                st.error(f"❌ Có lỗi xảy ra khi cập nhật từ điển: {str(e)}")
 
-    # Hiển thị danh sách từ hiện có
+# Hiển thị danh sách từ hiện có
     st.subheader("Danh sách từ hiện có")
     search_word = st.text_input("Tìm kiếm từ:", placeholder="Nhập từ cần tìm...")
     try:
         reload_dictionaries()
         updated_dict = dict_manager.get_sentiment_dict()
     except Exception:
-        updated_dict = None
+        updated_dict = SENTIMENT_DICT
     if updated_dict:
         filtered_dict = {k: v for k, v in updated_dict.items() if not search_word or search_word.lower() in k.lower()}
         st.info(f"Tìm thấy {len(filtered_dict)} từ" + (f" chứa '{search_word}'" if search_word else ""))
@@ -363,15 +424,19 @@ with train_tab2:
     # Form nhập biểu tượng cảm xúc mới
     with st.form("add_emoji_form"):
         new_emoji = st.text_input("Nhập biểu tượng cảm xúc:", placeholder="Ví dụ: 😊")
-        effect_options = ["positive", "negative", "neutral"]
-        effect_labels = {"positive": "Tích cực", "negative": "Tiêu cực", "neutral": "Trung lập"}
-        effect = st.selectbox("Loại cảm xúc:", effect_options, 
-                             format_func=lambda x: effect_labels.get(x, x))
-        emoji_value = st.slider("Giá trị cảm xúc:", min_value=-1.0, max_value=1.0, 
-                               value=0.6 if effect == "positive" else -0.6 if effect == "negative" else 0.0, 
-                               step=0.1)
-        description = st.text_input("Mô tả:", 
-                                  value=f"Emoji {effect_labels[effect].lower()} thể hiện cảm xúc {effect_labels[effect].lower()}")
+        emoji_value = st.slider("Giá trị cảm xúc:", min_value=-1.0, max_value=1.0, value=0.0, step=0.1)
+        # Tự động xác định loại cảm xúc dựa trên điểm số
+        if emoji_value >= 0.1:
+            auto_effect = "positive"
+            effect_label = "Tích cực"
+        elif emoji_value <= -0.1:
+            auto_effect = "negative"
+            effect_label = "Tiêu cực"
+        else:
+            auto_effect = "neutral"
+            effect_label = "Trung lập"
+        st.write(f'**Loại tự động:** {effect_label}')
+        description = st.text_input("Mô tả:", value=f"Emoji {effect_label.lower()} thể hiện cảm xúc {effect_label.lower()}")
         submit_emoji = st.form_submit_button("Thêm biểu tượng cảm xúc")
     if submit_emoji and new_emoji.strip():
         try:
@@ -379,8 +444,8 @@ with train_tab2:
             if new_emoji in PUNCTUATION_ANALYSIS:
                 st.warning(f"⚠️ Biểu tượng '{new_emoji}' đã tồn tại trong từ điển!")
             else:
-                # Thêm biểu tượng mới vào từ điển bằng dictionary manager
-                if dict_manager.add_emoji_to_punctuation(new_emoji, effect, emoji_value, description):
+                # Thêm biểu tượng mới vào từ điển bằng dictionary manager, dùng auto_effect
+                if dict_manager.add_emoji_to_punctuation(new_emoji, auto_effect, emoji_value, description):
                     # Cập nhật biến toàn cục
                     PUNCTUATION_ANALYSIS = dict_manager.get_punctuation_analysis()
                     
@@ -421,7 +486,7 @@ with train_tab3:
         compound_score = st.slider("Điểm số:", min_value=-1.0, max_value=1.0, value=0.0, step=0.1, key="compound_score_slider")
         
         # Tự động xác định loại cảm xúc dựa trên điểm số
-        compound_type = determine_sentiment_type(compound_score)
+        compound_type = "Tích cực" if compound_score >= 0.1 else "Tiêu cực" if compound_score <= -0.1 else "Trung lập"
         st.write(f'**Loại tự động:** {compound_type}')
         
         submit_compound = st.form_submit_button("Thêm cụm từ")
@@ -456,7 +521,7 @@ with train_tab3:
     if filtered_compounds:
         compound_table = []
         for word, score in filtered_compounds.items():
-            sentiment = "Tích cực 🟢" if score > 0.1 else "Tiêu cực 🔴" if score < -0.1 else "Trung lập ⚪"
+            sentiment = "Tích cực 🟢" if score >= 0.1 else "Tiêu cực 🔴" if score <= -0.1 else "Trung lập ⚪"
             compound_table.append({"Cụm từ": word, "Điểm số": f"{score:.1f}", "Loại": sentiment})
         st.table(compound_table)
 
@@ -510,3 +575,19 @@ with train_tab4:
             sentiment = "Tích cực 🟢" if score >= 0.1 else "Tiêu cực 🔴" if score <= -0.1 else "Trung lập ⚪"
             proverb_table.append({"Thành ngữ/tục ngữ": word, "Điểm số": f"{score:.1f}", "Loại": sentiment})
         st.table(proverb_table)
+
+# Tab thống kê lịch sử và xuất báo cáo
+tab3 = st.tabs(["Thống kê & Báo cáo"])[0]
+with tab3:
+    st.header('Lịch sử phân tích & Xuất báo cáo')
+    if st.session_state.analysis_history:
+        df_history = pd.DataFrame([
+            {'Thời gian': h['timestamp'], 'Văn bản': h['text'], 'Trạng thái': h.get('status', 'Không xác định')} for h in st.session_state.analysis_history
+        ])
+        st.dataframe(df_history)
+        if st.button('Xuất báo cáo DOCX'):
+            file_path = export_report_docx(st.session_state.analysis_history)
+            with open(file_path, 'rb') as f:
+                st.download_button('Tải báo cáo DOCX', f, file_name='bao_cao_phan_tich.docx')
+    else:
+        st.info('Chưa có lịch sử phân tích nào.')

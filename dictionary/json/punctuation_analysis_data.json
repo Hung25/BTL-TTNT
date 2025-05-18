@@ -88,5 +88,15 @@
         "effect": "positive",
         "value": 1.0,
         "description": "Emoji tích cực thể hiện cảm xúc tích cực"
+    },
+    "❤️": {
+        "effect": "positive",
+        "value": 0.6,
+        "description": "Emoji thể hiện cảm xúc tích cực"
+    },
+    "💕": {
+        "effect": "positive",
+        "value": 0.7,
+        "description": "Emoji tích cực thể hiện cảm xúc tích cực"
     }
 }

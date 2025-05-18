@@ -1,9 +1,13 @@
-streamlit==1.44.1
-torch==2.2.1
-transformers==4.38.2
+streamlit>=1.44.1
+torch>=2.2.1
+transformers>=4.40.1
 pyvi==0.1.1
 pandas==2.2.3
 scikit-learn==1.6.1
 datasets==2.18.0
 numpy==1.26.4
 tqdm==4.66.2
+underthesea==1.3.5
+watchdog>=3.0.0
+emoji==0.6.0
+python-docx
