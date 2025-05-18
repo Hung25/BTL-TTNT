@@ -29,7 +29,6 @@ from docx import Document
 import datetime
 
 def add_word(word, score):
-    # Validate input
     if not (-1 <= score <= 1):
         st.error("Điểm số phải trong khoảng [-1, 1]")
         return False
@@ -38,7 +37,6 @@ def add_word(word, score):
     success = dict_manager.add_word_to_sentiment_dict(word, score)
     
     if success:
-        # Trigger re-render
         st.session_state.update_trigger = not st.session_state.get('update_trigger', False)
         # Hiển thị thông báo
         st.success(f"Đã thêm từ '{word}' với điểm {score}")
